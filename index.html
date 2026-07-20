@@ -68,6 +68,7 @@
   .imgopt:focus-visible{outline:2px solid var(--neon);outline-offset:2px}
   .imgopt.sel{border-color:var(--neon);background:var(--light);box-shadow:var(--soft)}
   .imgopt img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:50%;background:var(--fog)}
+  .imgopt .noimg{width:100%;aspect-ratio:1/1;border-radius:50%;background:var(--fog);display:grid;place-items:center;font-family:"Playfair Display",Georgia,serif;font-size:46px;color:var(--dark);line-height:1}
   .imgopt span{font-size:12.5px;line-height:1.25;color:var(--ink)}
 
   /* Nav */
@@ -265,13 +266,13 @@ function renderPregunta(p){
   }else if(conImg){
     const cols=p.opciones.length<=4?' cols2':'';
     body=`<div class="imgs${cols}">`+p.opciones.map(o=>{
-      const im=o.img?`<img src="${img(o.img)}" alt="">`:`<div style="width:100%;aspect-ratio:1/1;border-radius:50%;background:var(--fog)"></div>`;
-      return `<button class="imgopt${marcado(o)?' sel':''}" onclick="${handler(o)}">${im}<span>${esc(o.label)}</span></button>`;
+      const im=o.img?`<img src="${img(o.img)}" alt="">`:`<div class="noimg" aria-hidden="true">?</div>`;
+      return `<button class="imgopt${marcado(o)?' sel':''}" data-q="${p.id}" data-v="${o.value}" onclick="${handler(o)}">${im}<span>${esc(o.label)}</span></button>`;
     }).join('')+`</div>`;
   }else{
     body=`<div class="opts">`+p.opciones.map(o=>{
       const cls=multi?'opt':'opt round';
-      return `<button class="${cls}${marcado(o)?' sel':''}" onclick="${handler(o)}"><span class="box"></span>${esc(o.label)}</button>`;
+      return `<button class="${cls}${marcado(o)?' sel':''}" data-q="${p.id}" data-v="${o.value}" onclick="${handler(o)}"><span class="box"></span>${esc(o.label)}</button>`;
     }).join('')+`</div>`;
   }
   const hint=multi?`<p class="hint">Puedes elegir varias — toca todas las que apliquen.</p>`:'';
@@ -283,10 +284,12 @@ function renderPregunta(p){
 
 function responder(id,val){r[id]=val;if(!orden.includes(id))orden.push(id);avanzar();}
 function toggle(id,val){
-  let cur=Array.isArray(r[id])?r[id].slice():[];
-  cur.includes(val)?cur=cur.filter(v=>v!==val):cur.push(val);
-  r[id]=cur;
-  renderPregunta(PASOS.find(p=>p.id===id)); // re-render el MISMO paso; NO avanza (solo "Continuar" avanza)
+  const cur=Array.isArray(r[id])?r[id]:[];
+  const on=!cur.includes(val);
+  r[id]=on?[...cur,val]:cur.filter(v=>v!==val);
+  // Actualiza SOLO el botón tocado (sin re-render → sin parpadeo, no recarga imágenes).
+  const btn=document.querySelector(`[data-q="${id}"][data-v="${val}"]`);
+  if(btn)btn.classList.toggle('sel',on);
 }
 function continuarMultiple(id){
   if(!Array.isArray(r[id]))r[id]=[];
